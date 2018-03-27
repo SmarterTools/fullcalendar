@@ -183,7 +183,9 @@ export default class BasicView extends View {
     // distribute the height to the rows
     // (totalHeight is a "recommended" value if isAuto)
     scrollerHeight = this.computeScrollerHeight(totalHeight)
-    this.setGridHeight(scrollerHeight, isAuto)
+    if (!this.opt('ignoreSetGridHeight')) {
+      this.setGridHeight(scrollerHeight, isAuto)
+    }
 
     // is the event limit dynamically calculated?
     if (eventLimit && typeof eventLimit !== 'number') {
