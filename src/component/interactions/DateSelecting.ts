@@ -43,8 +43,16 @@ export default class DateSelecting extends Interaction {
     let component = this.component
     let dragListener = this.dragListener
 
+    component.bindDateHandlerToEl(el, 'mouseover', (ev) => {
+      if (this.opt('selectable') === 'hover' && !component.shouldIgnoreMouse()) {
+        dragListener.startInteraction(ev, {
+          distance: this.opt('selectMinDistance')
+        })
+      }
+    })
+
     component.bindDateHandlerToEl(el, 'mousedown', (ev) => {
-      if (this.opt('selectable') && !component.shouldIgnoreMouse()) {
+      if (this.opt('selectable') === true && !component.shouldIgnoreMouse()) {
         dragListener.startInteraction(ev, {
           distance: this.opt('selectMinDistance')
         })
@@ -52,7 +60,7 @@ export default class DateSelecting extends Interaction {
     })
 
     component.bindDateHandlerToEl(el, 'touchstart', (ev) => {
-      if (this.opt('selectable') && !component.shouldIgnoreTouch()) {
+      if (this.opt('selectable') === true && !component.shouldIgnoreTouch()) {
         dragListener.startInteraction(ev, {
           delay: this.getDelay()
         })
@@ -67,6 +75,7 @@ export default class DateSelecting extends Interaction {
   buildDragListener() {
     let component = this.component
     let selectionFootprint // null if invalid selection
+    let selectHover = this.opt('selectable') === 'hover'
 
     let dragListener = new HitDragListener(component, {
       scroll: this.opt('dragScroll'),
@@ -81,12 +90,15 @@ export default class DateSelecting extends Interaction {
         let hitFootprint
 
         if (origHit) { // click needs to have started on a hit
+          if (selectHover) {
+            this.view.unselect() // since we could be rendering a new selection, we want to clear any old one
+          }
 
           origHitFootprint = component.getSafeHitFootprint(origHit)
           hitFootprint = component.getSafeHitFootprint(hit)
 
           if (origHitFootprint && hitFootprint) {
-            selectionFootprint = this.computeSelection(origHitFootprint, hitFootprint)
+            selectionFootprint = this.computeSelection(origHitFootprint, hitFootprint, selectHover)
           } else {
             selectionFootprint = null
           }
@@ -121,8 +133,8 @@ export default class DateSelecting extends Interaction {
   // Subclasses can override and provide additional data in the span object. Will be passed to renderSelectionFootprint().
   // Will return false if the selection is invalid and this should be indicated to the user.
   // Will return null/undefined if a selection invalid but no error should be reported.
-  computeSelection(footprint0, footprint1) {
-    let wholeFootprint = this.computeSelectionFootprint(footprint0, footprint1)
+  computeSelection(footprint0, footprint1, selectHover) {
+    let wholeFootprint = this.computeSelectionFootprint(footprint0, footprint1, selectHover)
 
     if (wholeFootprint && !this.isSelectionFootprintAllowed(wholeFootprint)) {
       return false
@@ -135,13 +147,23 @@ export default class DateSelecting extends Interaction {
   // Given two spans, must return the combination of the two.
   // TODO: do this separation of concerns (combining VS validation) for event dnd/resize too.
   // Assumes both footprints are non-open-ended.
-  computeSelectionFootprint(footprint0, footprint1) {
-    let ms = [
-      footprint0.unzonedRange.startMs,
-      footprint0.unzonedRange.endMs,
-      footprint1.unzonedRange.startMs,
-      footprint1.unzonedRange.endMs
-    ]
+  computeSelectionFootprint(footprint0, footprint1, selectHover) {
+    let ms = []
+    if (selectHover) {
+      ms = [
+        footprint1.unzonedRange.startMs,
+        footprint1.unzonedRange.endMs,
+        footprint1.unzonedRange.startMs,
+        footprint1.unzonedRange.endMs
+      ]
+    } else {
+      ms = [
+        footprint0.unzonedRange.startMs,
+        footprint0.unzonedRange.endMs,
+        footprint1.unzonedRange.startMs,
+        footprint1.unzonedRange.endMs
+      ]
+    }
 
     ms.sort(compareNumbers)
 

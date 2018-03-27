@@ -412,6 +412,9 @@ export default class DragListener {
 
   // Sets the speed-of-scrolling for the scrollEl
   setScrollVel(topVel, leftVel) {
+    if (this.options.scroll === 'scrollFix') {
+      return
+    }
 
     this.scrollTopVel = topVel
     this.scrollLeftVel = leftVel
